@@ -78,3 +78,4 @@ npm run lint   # eslint
 - [`docs/TECH_SPEC.md`](docs/TECH_SPEC.md) — architecture, schema, API design, migrations
 - [`docs/SLA_METRICS.md`](docs/SLA_METRICS.md) — every default SLA metric and how to score it
 - [`docs/PRODUCTION_READINESS_CHECKLIST.md`](docs/PRODUCTION_READINESS_CHECKLIST.md) — the hardening checklist this codebase was built against
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — how the app is deployed (Vercel/Render/Neon), required env vars, and gotchas hit along the way
