@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mentorsync-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mentorsync
+    ports:
+      - "5432:5432"
+    volumes:
+      # ใช้ Local Folder เก็บข้อมูล DB แทน เพื่อให้มั่นใจว่าข้อมูลไม่หาย 100%
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mentorsync-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=mentorsync
+      - DB_PORT=5432
+      - PORT=8000
+      # Dev-only placeholder — override with a real secret via a real deployment's secret store.
+      - JWT_SECRET=change-me-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # NEXT_PUBLIC_* vars are inlined by `next build`, so they must be passed as a build arg —
+      # setting them under `environment:` below has no effect on the already-built bundle.
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    container_name: mentorsync-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend

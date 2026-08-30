@@ -1,0 +1,26 @@
+meta {
+  name: Auth - Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "email": "admin@mentorsync.com",
+    "password": "password"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("token", res.body.token);
+}

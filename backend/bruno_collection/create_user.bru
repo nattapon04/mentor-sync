@@ -1,0 +1,21 @@
+meta {
+  name: Create User
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8000/api/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Nattapon (Admin)",
+    "email": "admin@mentorsync.com",
+    "password": "password123",
+    "role": "admin",
+    "department": "IT"
+  }
+}

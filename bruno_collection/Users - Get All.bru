@@ -1,0 +1,15 @@
+meta {
+  name: Users - Get All
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/users?page=1&limit=10&search=
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Evaluations - Get All
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/evaluations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

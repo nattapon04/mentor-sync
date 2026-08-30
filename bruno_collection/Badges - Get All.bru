@@ -1,0 +1,15 @@
+meta {
+  name: Badges - Get All
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/badges
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

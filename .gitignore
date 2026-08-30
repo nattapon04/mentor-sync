@@ -1,0 +1,8 @@
+# Local Postgres data volume (bind-mounted by docker-compose.yml) — runtime state, not source.
+postgres-data/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,15 @@
+meta {
+  name: Reports - Team
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/reports/team
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
