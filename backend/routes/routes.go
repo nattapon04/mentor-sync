@@ -13,9 +13,11 @@ import (
 )
 
 // Register mounts all routes on app using h for handler dependencies (DB, JWT secret).
-func Register(app *fiber.App, h *handlers.Handlers) {
+// corsAllowOrigins restricts which origins may make cross-origin requests — "*" for local dev,
+// the deployed frontend's exact origin in production.
+func Register(app *fiber.App, h *handlers.Handlers, corsAllowOrigins string) {
 	app.Use(logger.New())
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{AllowOrigins: corsAllowOrigins}))
 
 	adminOnly := middleware.RequireRole(string(models.RoleAdmin))
 	mentorOrAdmin := middleware.RequireRole(string(models.RoleMentor), string(models.RoleAdmin))

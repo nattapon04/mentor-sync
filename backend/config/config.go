@@ -13,9 +13,17 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBPort     string
+	// DBSSLMode is passed straight through to the Postgres DSN (e.g. "disable" for a local/
+	// docker-compose DB, "require" for a hosted DB like Neon/Supabase/RDS that mandates TLS).
+	DBSSLMode string
 
 	JWTSecret string
 	Port      string
+
+	// CORSAllowOrigins restricts which origins the API accepts cross-origin requests from.
+	// Defaults to "*" for local development; set to the deployed frontend's exact origin in
+	// production (e.g. "https://mentor-sync.vercel.app").
+	CORSAllowOrigins string
 
 	// DBAutoMigrate controls whether the API server runs pending migrations on boot. Set
 	// DB_AUTO_MIGRATE=false for multi-replica production deploys that run `cmd/migrate` as a
@@ -28,14 +36,16 @@ type Config struct {
 // failure deep inside a request.
 func Load() Config {
 	return Config{
-		DBHost:        mustGetenv("DB_HOST"),
-		DBUser:        mustGetenv("DB_USER"),
-		DBPassword:    mustGetenv("DB_PASSWORD"),
-		DBName:        mustGetenv("DB_NAME"),
-		DBPort:        mustGetenv("DB_PORT"),
-		JWTSecret:     mustGetenv("JWT_SECRET"),
-		Port:          getenvDefault("PORT", "8000"),
-		DBAutoMigrate: getenvDefault("DB_AUTO_MIGRATE", "true") != "false",
+		DBHost:           mustGetenv("DB_HOST"),
+		DBUser:           mustGetenv("DB_USER"),
+		DBPassword:       mustGetenv("DB_PASSWORD"),
+		DBName:           mustGetenv("DB_NAME"),
+		DBPort:           mustGetenv("DB_PORT"),
+		DBSSLMode:        getenvDefault("DB_SSLMODE", "disable"),
+		JWTSecret:        mustGetenv("JWT_SECRET"),
+		Port:             getenvDefault("PORT", "8000"),
+		CORSAllowOrigins: getenvDefault("CORS_ALLOW_ORIGINS", "*"),
+		DBAutoMigrate:    getenvDefault("DB_AUTO_MIGRATE", "true") != "false",
 	}
 }
 

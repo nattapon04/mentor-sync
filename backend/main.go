@@ -38,7 +38,7 @@ func main() {
 	h := handlers.New(database.DB, cfg.JWTSecret)
 
 	app := fiber.New()
-	routes.Register(app, h)
+	routes.Register(app, h, cfg.CORSAllowOrigins)
 
 	slog.Info("starting server", "port", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {
