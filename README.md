@@ -50,7 +50,7 @@ Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to your backend's `/api` URL 
 
 ### Default login (fresh/seeded database only)
 
-`admin@mentorsync.com` / `password` — change this before using anywhere beyond local development.
+`docker-compose.yml` sets `SEED_USER_PASSWORD=password`, so on a local Docker Compose setup the seeded accounts log in with `admin@mentorsync.com` / `password` (also `mentor@mentorsync.com`, `mentee@mentorsync.com`). Running the backend outside Docker Compose without `SEED_USER_PASSWORD` set generates a random one-time password for these accounts and logs it once instead — check your server's log output. Never set `SEED_USER_PASSWORD=password` on a deploy reachable from outside your machine.
 
 ## Backend commands
 

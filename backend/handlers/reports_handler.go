@@ -29,31 +29,20 @@ func (h *Handlers) GetTeamReports(c *fiber.Ctx) error {
 
 	var response TeamReportResponse
 
-	evalQuery := h.DB.Model(&models.JiraEvaluation{})
-	badgeQuery := h.DB.Model(&models.EarnedBadge{})
 	evalDataQuery := h.DB.Preload("Mentee").Preload("Metrics")
+	badgeDataQuery := h.DB.Preload("Mentee")
 	noteDataQuery := h.DB.Preload("Mentee")
 
 	if startDate != "" {
-		evalQuery = evalQuery.Where("created_at >= ?", startDate)
-		badgeQuery = badgeQuery.Where("created_at >= ?", startDate)
 		evalDataQuery = evalDataQuery.Where("created_at >= ?", startDate)
+		badgeDataQuery = badgeDataQuery.Where("created_at >= ?", startDate)
 		noteDataQuery = noteDataQuery.Where("created_at >= ?", startDate)
 	}
 	if endDate != "" {
-		evalQuery = evalQuery.Where("created_at <= ?", endDate+" 23:59:59")
-		badgeQuery = badgeQuery.Where("created_at <= ?", endDate+" 23:59:59")
 		evalDataQuery = evalDataQuery.Where("created_at <= ?", endDate+" 23:59:59")
+		badgeDataQuery = badgeDataQuery.Where("created_at <= ?", endDate+" 23:59:59")
 		noteDataQuery = noteDataQuery.Where("created_at <= ?", endDate+" 23:59:59")
 	}
-
-	var evalCount int64
-	evalQuery.Count(&evalCount)
-	response.TotalEvaluations = int(evalCount)
-
-	var badgeCount int64
-	badgeQuery.Count(&badgeCount)
-	response.TotalBadges = int(badgeCount)
 
 	// Fetch all mentees
 	var mentees []models.User
@@ -87,6 +76,7 @@ func (h *Handlers) GetTeamReports(c *fiber.Ctx) error {
 		if ev.Mentee.ID == uuid.Nil {
 			continue // mentee soft-deleted or missing
 		}
+		response.TotalEvaluations++
 		dept := ev.Mentee.Department
 		if dept == "" {
 			dept = "Unassigned"
@@ -108,6 +98,21 @@ func (h *Handlers) GetTeamReports(c *fiber.Ctx) error {
 				deptPassedMetrics[dept]++
 			}
 		}
+	}
+
+	// Fetch all badges (within the selected date range), same soft-delete-respecting shape as
+	// evaluations above — a bare COUNT(*) here previously included badges belonging to a
+	// soft-deleted mentee (e.g. the seeded demo mentee), inflating "Badges Awarded" with
+	// achievements that don't belong to any mentee visible anywhere else in the app.
+	var badges []models.EarnedBadge
+	if err := badgeDataQuery.Find(&badges).Error; err != nil {
+		return respondError(c, fiber.StatusInternalServerError, err.Error())
+	}
+	for _, b := range badges {
+		if b.Mentee.ID == uuid.Nil {
+			continue // mentee soft-deleted or missing
+		}
+		response.TotalBadges++
 	}
 
 	// Fetch all feedback notes (within the selected date range), same soft-delete-respecting,

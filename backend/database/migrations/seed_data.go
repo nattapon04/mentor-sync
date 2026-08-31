@@ -1,6 +1,11 @@
 package migrations
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"log/slog"
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/nattapon/mentorsync/models"
 	"golang.org/x/crypto/bcrypt"
@@ -113,6 +118,50 @@ func backfillSLARuleTargetNumerics(tx *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+// rotateDemoUserPasswords rotates the 3 seedUserIfMissing demo accounts off the fixed
+// "password" every fresh/seeded database got (see the migration's doc comment for why).
+// Note: a soft-deleted account (User.DeletedAt set) can never log in regardless of its
+// password — GORM's default scope excludes it from every lookup, including auth_handler.go's
+// login query — so this only matters for whichever of the 3 demo accounts are still active.
+//
+// Uses SEED_USER_PASSWORD if set (so a local/demo deploy that wants the old convenience can
+// still get it — set SEED_USER_PASSWORD=password); otherwise generates a random one-time
+// password and logs it via slog once, so an operator without SEED_USER_PASSWORD configured can
+// still recover access to the demo accounts from their platform's log output.
+func rotateDemoUserPasswords(tx *gorm.DB) error {
+	demoEmails := []string{"admin@mentorsync.com", "mentor@mentorsync.com", "mentee@mentorsync.com"}
+
+	password := os.Getenv("SEED_USER_PASSWORD")
+	if password == "" {
+		generated, err := randomPassword(18)
+		if err != nil {
+			return err
+		}
+		password = generated
+		slog.Warn(
+			"SEED_USER_PASSWORD not set — generated a one-time password for the demo accounts; set SEED_USER_PASSWORD to control this yourself",
+			"accounts", demoEmails, "password", password,
+		)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return tx.Model(&models.User{}).
+		Where("email IN ?", demoEmails).
+		Update("password_hash", string(hash)).Error
+}
+
+// randomPassword returns a URL-safe base64 string decoded from n random bytes.
+func randomPassword(n int) (string, error) {
+	buf := make([]byte, n)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
 // seedDemoBadges awards a starter set of badges to the demo mentee, for local/demo environments.

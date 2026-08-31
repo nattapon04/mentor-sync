@@ -119,6 +119,19 @@ func all() []*gormigrate.Migration {
 				return backfillSLARuleTargetNumerics(tx)
 			},
 		},
+		{
+			// seedUserIfMissing's password ("password") is documented in README.md as the
+			// fresh/seeded-database default — fine for a local docker-compose db, but nothing
+			// ever gated it to non-production use, so it shipped as a real, publicly-documented
+			// login on any environment (including a hosted production deploy) that ran the
+			// baseline migrations. Rotates the 3 demo accounts off that fixed password — see
+			// rotateDemoUserPasswords for why a soft-deleted demo account is already unreachable
+			// regardless.
+			ID: "202608310003_rotate_demo_user_passwords",
+			Migrate: func(tx *gorm.DB) error {
+				return rotateDemoUserPasswords(tx)
+			},
+		},
 	}
 }
 

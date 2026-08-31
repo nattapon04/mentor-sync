@@ -33,6 +33,9 @@ services:
       - PORT=8000
       # Dev-only placeholder — override with a real secret via a real deployment's secret store.
       - JWT_SECRET=change-me-in-production
+      # Keeps the documented "admin@mentorsync.com / password" local login working. Leave unset
+      # (or set to a real secret) on any deploy reachable from outside your machine.
+      - SEED_USER_PASSWORD=password
     depends_on:
       db:
         condition: service_healthy
