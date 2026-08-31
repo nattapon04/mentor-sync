@@ -9,7 +9,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import api, { getErrorMessage } from "@/lib/api";
 import { User, Evaluation } from "@/types";
-import { TIME_RANGE_OPTIONS, TimeRange, PASS_RATE_THRESHOLDS } from "@/lib/constants";
+import { TIME_RANGE_OPTIONS, TimeRange, PASS_RATE_THRESHOLDS, getStartDateParam } from "@/lib/constants";
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -33,11 +33,8 @@ export default function Dashboard() {
   const fetchEvaluations = async () => {
     try {
       const params: Record<string, string> = {};
-      if (timeRange !== "all") {
-        const start = new Date();
-        start.setDate(start.getDate() - parseInt(timeRange));
-        params.start_date = start.toISOString().split('T')[0];
-      }
+      const startDate = getStartDateParam(timeRange);
+      if (startDate) params.start_date = startDate;
       const { data } = await api.get("/evaluations", { params });
       setEvaluations(Array.isArray(data) ? data : []);
     } catch (err) { setError(getErrorMessage(err, t('failedToLoadData'))); }

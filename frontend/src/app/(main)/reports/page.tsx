@@ -3,22 +3,26 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { Users, FileText, Activity, BarChart2, Medal, CheckCircle2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from "recharts";
+import { Users, FileText, Activity, BarChart2, Medal, CheckCircle2, MessageSquare } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from "recharts";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import api, { getErrorMessage } from "@/lib/api";
-import { TIME_RANGE_OPTIONS, TimeRange } from "@/lib/constants";
+import { TIME_RANGE_OPTIONS, TimeRange, getStartDateParam } from "@/lib/constants";
 
 interface DepartmentStat {
   department: string;
   mentee_count: number;
   total_tickets: number;
   pass_rate_percent: number;
+  positive_notes: number;
+  neutral_notes: number;
+  constructive_notes: number;
 }
 
 interface ReportData {
   total_evaluations: number;
   total_badges: number;
+  total_notes: number;
   department_stats: DepartmentStat[];
 }
 
@@ -38,11 +42,8 @@ export default function Reports() {
     const fetchReports = async () => {
       try {
         const params: Record<string, string> = {};
-        if (timeRange !== "all") {
-          const start = new Date();
-          start.setDate(start.getDate() - parseInt(timeRange));
-          params.start_date = start.toISOString().split('T')[0];
-        }
+        const startDate = getStartDateParam(timeRange);
+        if (startDate) params.start_date = startDate;
         const { data } = await api.get("/reports/team", { params });
         setReportData(data);
         setError(null);
@@ -87,7 +88,7 @@ export default function Reports() {
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-foreground">{t('totalMentees')}</h3>
@@ -111,13 +112,25 @@ export default function Reports() {
         </div>
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-foreground">{t('feedbackNotes')}</h3>
+            <div className="bg-sky-500/10 p-2 rounded-xl"><MessageSquare className="w-5 h-5 text-sky-500" /></div>
+          </div>
+          <p className="text-3xl font-extrabold text-foreground">{reportData.total_notes}</p>
+        </div>
+        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-foreground">{t('avgCompliance')}</h3>
             <div className="bg-emerald-500/10 p-2 rounded-xl"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
           </div>
           <p className="text-3xl font-extrabold text-foreground">
-            {reportData.department_stats.length > 0
-              ? (reportData.department_stats.reduce((acc, stat) => acc + stat.pass_rate_percent, 0) / reportData.department_stats.length).toFixed(1)
-              : 0}%
+            {(() => {
+              // Departments with zero evaluated tickets have no real pass rate — including
+              // their 0% in this average would conflate "no data yet" with "failing".
+              const withData = reportData.department_stats.filter(stat => stat.total_tickets > 0);
+              return withData.length > 0
+                ? (withData.reduce((acc, stat) => acc + stat.pass_rate_percent, 0) / withData.length).toFixed(1)
+                : "0";
+            })()}%
           </p>
         </div>
       </div>
@@ -169,6 +182,26 @@ export default function Reports() {
               </PieChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-primary" /> {t('notesPerDept')}
+        </h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={reportData.department_stats}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="department" tick={{ fill: "var(--foreground)", fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fill: "var(--foreground)", fontSize: 12 }} />
+              <Tooltip contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", color: "var(--foreground)" }} />
+              <Legend />
+              <Bar dataKey="positive_notes" name={t('notePos')} stackId="notes" fill="#10b981" />
+              <Bar dataKey="neutral_notes" name={t('noteNeu')} stackId="notes" fill="#94a3b8" />
+              <Bar dataKey="constructive_notes" name={t('noteCon')} stackId="notes" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
