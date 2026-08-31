@@ -60,7 +60,7 @@ export default function MenteeDetail() {
       const deptRules = deptRes && Array.isArray(deptRes.data) ? deptRes.data : [];
       const combined: SLARule[] = [...globalRules, ...deptRules];
       setSlaRules(combined);
-      setMetricInputs(combined.map(r => ({ sla_rule_id: r.id, value_numeric: "", value_string: "Pass", comment: "", is_enabled: true })));
+      setMetricInputs(combined.map(r => ({ sla_rule_id: r.id, value_numeric: "", estimate_numeric: "", value_string: "Pass", comment: "", is_enabled: true })));
     } catch (err) { setError(getErrorMessage(err, t('failedToLoadData'))); }
   };
 
@@ -106,6 +106,7 @@ export default function MenteeDetail() {
         metrics: metricInputs.filter(m => m.is_enabled && visibleRuleIds.has(m.sla_rule_id)).map(m => ({
           sla_rule_id: m.sla_rule_id,
           value_numeric: m.value_numeric ? parseFloat(m.value_numeric) : null,
+          estimate_numeric: m.estimate_numeric ? parseFloat(m.estimate_numeric) : null,
           value_string: m.value_string,
           comment: m.comment,
           is_enabled: m.is_enabled
@@ -362,6 +363,7 @@ export default function MenteeDetail() {
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <span>{t('targetLabel')} <span className="font-mono text-foreground">{m.sla_rule?.target_value}</span></span>
+                                  {m.estimate_numeric !== null && <span>· {t('estimateForThisTicket')} <span className="font-bold text-foreground">{m.estimate_numeric}</span></span>}
                                   {m.value_numeric !== null && <span>· {t('scoreLabel')} <span className="font-bold text-foreground">{m.value_numeric}</span></span>}
                                   {m.value_string && <span>· <span className={m.value_string === 'Pass' ? 'text-emerald-500 font-bold' : m.value_string === 'Fail' ? 'text-rose-500 font-bold' : ''}>{m.value_string === 'Pass' ? t('pass') : m.value_string === 'Fail' ? t('fail') : m.value_string === 'N/A' ? t('notApplicable') : m.value_string}</span></span>}
                                 </div>
@@ -448,7 +450,10 @@ export default function MenteeDetail() {
                           {metricBadge(rule.metric_type)}
                         </div>
                         {inputState.is_enabled && (
-                          <div className="grid grid-cols-3 gap-3 ml-7">
+                          <div className={`grid gap-3 ml-7 ${rule.target_relative_to_estimate ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                            {rule.target_relative_to_estimate && (
+                              <input type="number" step="any" placeholder={t('estimateForThisTicket')} value={inputState.estimate_numeric} onChange={e => { const newInputs = [...metricInputs]; newInputs[idx].estimate_numeric = e.target.value; setMetricInputs(newInputs); }} className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                            )}
                             <input type="number" placeholder={t('scoreOptional')} value={inputState.value_numeric} onChange={e => { const newInputs = [...metricInputs]; newInputs[idx].value_numeric = e.target.value; setMetricInputs(newInputs); }} className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                             <select value={inputState.value_string} onChange={e => { const newInputs = [...metricInputs]; newInputs[idx].value_string = e.target.value; setMetricInputs(newInputs); }} className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                               <option value="Pass">{t('pass')}</option>

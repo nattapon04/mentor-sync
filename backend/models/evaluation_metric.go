@@ -13,8 +13,12 @@ type EvaluationMetric struct {
 	SLARule      SLARule   `gorm:"foreignKey:SLARuleID" json:"sla_rule"`
 	IsEnabled    bool      `gorm:"default:true" json:"is_enabled"`
 	ValueNumeric *float64  `json:"value_numeric"`
-	ValueString  string    `json:"value_string"`
-	Comment      string    `json:"comment"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	// EstimateNumeric is this ticket's own estimated value (e.g. estimated days), used instead
+	// of SLARule.TargetNumeric when SLARule.TargetRelativeToEstimate is true — see that field's
+	// doc comment.
+	EstimateNumeric *float64  `json:"estimate_numeric"`
+	ValueString     string    `json:"value_string"`
+	Comment         string    `json:"comment"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }

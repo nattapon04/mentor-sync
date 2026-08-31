@@ -132,6 +132,18 @@ func all() []*gormigrate.Migration {
 				return rotateDemoUserPasswords(tx)
 			},
 		},
+		{
+			// Lets an SLA rule's target vary per ticket (e.g. Ticket Cycle Time compared against
+			// that ticket's own estimate) instead of only a fixed number — see
+			// SLARule.TargetRelativeToEstimate and EvaluationMetric.EstimateNumeric.
+			ID: "202608310004_add_target_relative_to_estimate",
+			Migrate: func(tx *gorm.DB) error {
+				if err := tx.Exec(`ALTER TABLE sla_rules ADD COLUMN IF NOT EXISTS target_relative_to_estimate boolean NOT NULL DEFAULT false`).Error; err != nil {
+					return err
+				}
+				return tx.Exec(`ALTER TABLE evaluation_metrics ADD COLUMN IF NOT EXISTS estimate_numeric double precision`).Error
+			},
+		},
 	}
 }
 

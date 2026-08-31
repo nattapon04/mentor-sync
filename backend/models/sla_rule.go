@@ -34,11 +34,17 @@ type SLARule struct {
 	// Areas compute an actual numeric gap-to-target instead of only a pass/fail rate. Both are
 	// nil/empty for rules that haven't been given a structured target — TargetValue alone still
 	// fully describes the rule for display and Pass/Fail evaluation.
-	TargetOperator string         `gorm:"type:varchar(2)" json:"target_operator,omitempty" validate:"omitempty,oneof=>= <= ="`
-	TargetNumeric  *float64       `json:"target_numeric,omitempty"`
-	Scope          string         `json:"scope"`
-	IsActive       bool           `gorm:"default:true" json:"is_active"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+	TargetOperator string   `gorm:"type:varchar(2)" json:"target_operator,omitempty" validate:"omitempty,oneof=>= <= ="`
+	TargetNumeric  *float64 `json:"target_numeric,omitempty"`
+	// TargetRelativeToEstimate marks a rule whose numeric target isn't a fixed number but
+	// varies per ticket (e.g. Ticket Cycle Time compared against that ticket's own estimated
+	// days, not a flat "<= 3 days" for every ticket). When true, TargetOperator still gives the
+	// comparison direction, but TargetNumeric is unused — each EvaluationMetric instead supplies
+	// its own EstimateNumeric to compare against.
+	TargetRelativeToEstimate bool           `gorm:"default:false" json:"target_relative_to_estimate"`
+	Scope                    string         `json:"scope"`
+	IsActive                 bool           `gorm:"default:true" json:"is_active"`
+	CreatedAt                time.Time      `json:"created_at"`
+	UpdatedAt                time.Time      `json:"updated_at"`
+	DeletedAt                gorm.DeletedAt `gorm:"index" json:"-"`
 }

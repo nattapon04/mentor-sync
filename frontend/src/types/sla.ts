@@ -9,6 +9,10 @@ export interface SLARule {
   // haven't been given a structured target.
   target_operator?: "" | ">=" | "<=" | "=";
   target_numeric?: number | null;
+  // When true, target_numeric is unused — this rule's target varies per ticket (e.g. Ticket
+  // Cycle Time compared against that ticket's own estimate), supplied per evaluation via
+  // EvaluationMetric.estimate_numeric instead.
+  target_relative_to_estimate?: boolean;
   scope?: string;
   is_active?: boolean;
 }
@@ -16,6 +20,7 @@ export interface SLARule {
 export interface MetricInput {
   sla_rule_id: string;
   value_numeric: string;
+  estimate_numeric: string;
   value_string: string;
   comment: string;
   is_enabled: boolean;

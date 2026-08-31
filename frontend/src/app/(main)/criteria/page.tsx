@@ -24,6 +24,7 @@ export default function SLACriteria() {
   const [targetValue, setTargetValue] = useState("");
   const [targetOperator, setTargetOperator] = useState("");
   const [targetNumeric, setTargetNumeric] = useState("");
+  const [targetRelativeToEstimate, setTargetRelativeToEstimate] = useState(false);
   const [scope, setScope] = useState("global");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,6 +37,7 @@ export default function SLACriteria() {
   const [editTargetValue, setEditTargetValue] = useState("");
   const [editTargetOperator, setEditTargetOperator] = useState("");
   const [editTargetNumeric, setEditTargetNumeric] = useState("");
+  const [editTargetRelativeToEstimate, setEditTargetRelativeToEstimate] = useState(false);
   const [editScope, setEditScope] = useState("global");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -67,9 +69,10 @@ export default function SLACriteria() {
       await api.post("/sla-rules", {
         name, metric_type: metricType, eval_type: evalType, target_value: targetValue, scope,
         target_operator: targetOperator,
-        target_numeric: targetNumeric ? parseFloat(targetNumeric) : null,
+        target_numeric: targetRelativeToEstimate || !targetNumeric ? null : parseFloat(targetNumeric),
+        target_relative_to_estimate: targetRelativeToEstimate,
       });
-      setName(""); setTargetValue(""); setTargetOperator(""); setTargetNumeric(""); setScope("global"); setEvalType("both");
+      setName(""); setTargetValue(""); setTargetOperator(""); setTargetNumeric(""); setTargetRelativeToEstimate(false); setScope("global"); setEvalType("both");
       setError(null);
       fetchRules();
     } catch (err) { setError(getErrorMessage(err, t('failedToSaveData'))); }
@@ -84,6 +87,7 @@ export default function SLACriteria() {
     setEditTargetValue(rule.target_value);
     setEditTargetOperator(rule.target_operator || "");
     setEditTargetNumeric(rule.target_numeric != null ? String(rule.target_numeric) : "");
+    setEditTargetRelativeToEstimate(rule.target_relative_to_estimate || false);
     setEditScope(rule.scope || "global");
     setIsEditModalOpen(true);
   };
@@ -96,7 +100,8 @@ export default function SLACriteria() {
       await api.put(`/sla-rules/${editingRule.id}`, {
         name: editName, metric_type: editMetricType, eval_type: editEvalType, target_value: editTargetValue, scope: editScope,
         target_operator: editTargetOperator,
-        target_numeric: editTargetNumeric ? parseFloat(editTargetNumeric) : null,
+        target_numeric: editTargetRelativeToEstimate || !editTargetNumeric ? null : parseFloat(editTargetNumeric),
+        target_relative_to_estimate: editTargetRelativeToEstimate,
       });
       setIsEditModalOpen(false);
       setError(null);
@@ -210,7 +215,11 @@ export default function SLACriteria() {
                 <option value="<=">&le;</option>
                 <option value="=">=</option>
               </select>
-              <input type="number" step="any" value={targetNumeric} onChange={e => setTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none" />
+              <input type="number" step="any" disabled={targetRelativeToEstimate} value={targetNumeric} onChange={e => setTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-50" />
+              <label className="flex items-center gap-2 text-sm text-foreground/80 md:col-span-3">
+                <input type="checkbox" checked={targetRelativeToEstimate} onChange={e => setTargetRelativeToEstimate(e.target.checked)} className="w-4 h-4 rounded border-border" />
+                {t('targetRelativeToEstimateLabel')}
+              </label>
             </div>
           </div>
           <div className="mt-4 flex justify-end">
@@ -329,8 +338,12 @@ export default function SLACriteria() {
                       <option value="<=">&le;</option>
                       <option value="=">=</option>
                     </select>
-                    <input type="number" step="any" value={editTargetNumeric} onChange={e => setEditTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none" />
+                    <input type="number" step="any" disabled={editTargetRelativeToEstimate} value={editTargetNumeric} onChange={e => setEditTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-50" />
                   </div>
+                  <label className="flex items-center gap-2 text-sm text-foreground/80 mt-2">
+                    <input type="checkbox" checked={editTargetRelativeToEstimate} onChange={e => setEditTargetRelativeToEstimate(e.target.checked)} className="w-4 h-4 rounded border-border" />
+                    {t('targetRelativeToEstimateLabel')}
+                  </label>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">{t('departmentScope')}</label>
