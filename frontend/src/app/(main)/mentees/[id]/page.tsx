@@ -9,9 +9,10 @@ import Link from "next/link";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from "recharts";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { FocusAreasPanel } from "@/components/FocusAreasPanel";
 import api, { getErrorMessage } from "@/lib/api";
 import { User as UserModel, SLARule, MetricInput, Evaluation, EarnedBadge, GeneralNote } from "@/types";
-import { TIME_RANGE_OPTIONS, TimeRange } from "@/lib/constants";
+import { TIME_RANGE_OPTIONS, TimeRange, getStartDateParam } from "@/lib/constants";
 import { DictionaryKey } from "@/locales/dictionary";
 
 export default function MenteeDetail() {
@@ -72,11 +73,8 @@ export default function MenteeDetail() {
       loadSlaRules(userRes.data.department);
 
       const queryParams: Record<string, string> = { mentee_id: menteeId };
-      if (timeRange !== "all") {
-        const start = new Date();
-        start.setDate(start.getDate() - parseInt(timeRange));
-        queryParams.start_date = start.toISOString().split('T')[0];
-      }
+      const startDate = getStartDateParam(timeRange);
+      if (startDate) queryParams.start_date = startDate;
 
       const [evalsRes, badgesRes, notesRes] = await Promise.all([
         api.get("/evaluations", { params: queryParams }),
@@ -330,6 +328,8 @@ export default function MenteeDetail() {
                 </div>
               </div>
             </div>
+
+            <FocusAreasPanel evaluations={evaluations} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">

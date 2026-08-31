@@ -8,8 +8,9 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGr
 import { ErrorBanner } from "@/components/ErrorBanner";
 import api, { getErrorMessage } from "@/lib/api";
 import { EarnedBadge, GeneralNote, Evaluation } from "@/types";
-import { TIME_RANGE_OPTIONS, TimeRange } from "@/lib/constants";
+import { TIME_RANGE_OPTIONS, TimeRange, getStartDateParam } from "@/lib/constants";
 import { DictionaryKey } from "@/locales/dictionary";
+import { FocusAreasPanel } from "@/components/FocusAreasPanel";
 
 export default function MyDashboard() {
   const { t } = useLanguage();
@@ -27,11 +28,8 @@ export default function MyDashboard() {
     const fetchData = async () => {
       try {
         const params: Record<string, string> = { mentee_id: user.id };
-        if (timeRange !== "all") {
-          const start = new Date();
-          start.setDate(start.getDate() - parseInt(timeRange));
-          params.start_date = start.toISOString().split('T')[0];
-        }
+        const startDate = getStartDateParam(timeRange);
+        if (startDate) params.start_date = startDate;
 
         const [evalsRes, badgesRes, notesRes] = await Promise.all([
           api.get("/evaluations", { params }),
@@ -93,9 +91,6 @@ export default function MyDashboard() {
           <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
             {TIME_RANGE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>)}
           </select>
-          <button className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl shadow-sm text-sm font-bold hover:bg-primary/90 transition-colors">
-            {t('request1on1')}
-          </button>
         </div>
       </div>
 
@@ -159,6 +154,8 @@ export default function MyDashboard() {
           </div>
         </div>
       </div>
+
+      <FocusAreasPanel evaluations={evaluations} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         <div className="lg:col-span-2 space-y-4">

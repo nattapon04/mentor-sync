@@ -78,6 +78,43 @@ func engineeringSLARulesV2() []models.SLARule {
 	}
 }
 
+// backfillSLARuleTargetNumerics sets TargetOperator/TargetNumeric on the default rules seeded
+// by engineeringSLARulesV1/V2 above, parsed from the same targets documented in
+// docs/SLA_METRICS.md. Only fills rows where target_operator is still unset, so it never
+// overwrites a value an admin has since edited through the SLA Config UI.
+func backfillSLARuleTargetNumerics(tx *gorm.DB) error {
+	type target struct {
+		name     string
+		operator string
+		numeric  float64
+	}
+	targets := []target{
+		{"การตรวจสอบด้วยตัวเอง (Self-Verification)", ">=", 100},
+		{"จำนวนรอบการแก้โค้ดที่รีวิว (Code Review Rework)", "<=", 2},
+		{"บั๊กที่หลุดไปโปรดักชัน (Production Escape Bugs)", "<=", 0},
+		{"ระยะเวลาทำทิกเก็ต (Ticket Cycle Time)", "<=", 3},
+		{"ความสำเร็จตามสปริ้นท์ (Sprint Commitment)", ">=", 85},
+		{"การคิดเชิงวิพากษ์ (Critical Thinking)", ">=", 4},
+		{"การซัพพอร์ตและตรวจสอบ (Support & Investigate)", ">=", 4},
+		{"การรีวิวโค้ดให้เพื่อน (Peer Code Reviews)", ">=", 5},
+		{"อัตราผ่านโดยไม่ต้องแก้ไขซ้ำ (First-Time-Right Rate)", "<=", 0},
+		{"ระยะเวลาตอบสนองงานแรก (Time-to-First-Response)", "<=", 4},
+		{"ความครบถ้วนของเอกสารประกอบงาน (Documentation Completeness)", ">=", 100},
+		{"ความแม่นยำของการประเมิน Story Point (Estimation Accuracy)", "<=", 20},
+		{"การแบ่งปันความรู้ในทีม (Knowledge Sharing)", ">=", 1},
+		{"การเข้าร่วมกิจกรรม Scrum (Standup/Ceremony Participation)", ">=", 90},
+	}
+
+	for _, t := range targets {
+		if err := tx.Model(&models.SLARule{}).
+			Where("name = ? AND scope = ? AND target_operator IS NULL", t.name, "Engineering").
+			Updates(map[string]any{"target_operator": t.operator, "target_numeric": t.numeric}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // seedDemoBadges awards a starter set of badges to the demo mentee, for local/demo environments.
 // No-ops if the demo users aren't present (e.g. deleted from a shared/demo DB, or a production
 // DB where seedDefaultUsers was skipped). Uses Find (not First) so an absent row is a normal

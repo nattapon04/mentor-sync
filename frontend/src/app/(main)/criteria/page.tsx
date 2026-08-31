@@ -22,6 +22,8 @@ export default function SLACriteria() {
   const [metricType, setMetricType] = useState("quality");
   const [evalType, setEvalType] = useState("both");
   const [targetValue, setTargetValue] = useState("");
+  const [targetOperator, setTargetOperator] = useState("");
+  const [targetNumeric, setTargetNumeric] = useState("");
   const [scope, setScope] = useState("global");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -32,6 +34,8 @@ export default function SLACriteria() {
   const [editMetricType, setEditMetricType] = useState("quality");
   const [editEvalType, setEditEvalType] = useState("both");
   const [editTargetValue, setEditTargetValue] = useState("");
+  const [editTargetOperator, setEditTargetOperator] = useState("");
+  const [editTargetNumeric, setEditTargetNumeric] = useState("");
   const [editScope, setEditScope] = useState("global");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -60,8 +64,12 @@ export default function SLACriteria() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await api.post("/sla-rules", { name, metric_type: metricType, eval_type: evalType, target_value: targetValue, scope });
-      setName(""); setTargetValue(""); setScope("global"); setEvalType("both");
+      await api.post("/sla-rules", {
+        name, metric_type: metricType, eval_type: evalType, target_value: targetValue, scope,
+        target_operator: targetOperator,
+        target_numeric: targetNumeric ? parseFloat(targetNumeric) : null,
+      });
+      setName(""); setTargetValue(""); setTargetOperator(""); setTargetNumeric(""); setScope("global"); setEvalType("both");
       setError(null);
       fetchRules();
     } catch (err) { setError(getErrorMessage(err, t('failedToSaveData'))); }
@@ -74,6 +82,8 @@ export default function SLACriteria() {
     setEditMetricType(rule.metric_type);
     setEditEvalType(rule.eval_type || "both");
     setEditTargetValue(rule.target_value);
+    setEditTargetOperator(rule.target_operator || "");
+    setEditTargetNumeric(rule.target_numeric != null ? String(rule.target_numeric) : "");
     setEditScope(rule.scope || "global");
     setIsEditModalOpen(true);
   };
@@ -83,7 +93,11 @@ export default function SLACriteria() {
     if (!editingRule) return;
     setIsUpdating(true);
     try {
-      await api.put(`/sla-rules/${editingRule.id}`, { name: editName, metric_type: editMetricType, eval_type: editEvalType, target_value: editTargetValue, scope: editScope });
+      await api.put(`/sla-rules/${editingRule.id}`, {
+        name: editName, metric_type: editMetricType, eval_type: editEvalType, target_value: editTargetValue, scope: editScope,
+        target_operator: editTargetOperator,
+        target_numeric: editTargetNumeric ? parseFloat(editTargetNumeric) : null,
+      });
       setIsEditModalOpen(false);
       setError(null);
       fetchRules();
@@ -185,6 +199,18 @@ export default function SLACriteria() {
                   <option key={dept} value={dept}>🏢 {dept}</option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-foreground/80 mb-1.5">{t('structuredTargetOptional')}</label>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <select value={targetOperator} onChange={e => setTargetOperator(e.target.value)} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:outline-none">
+                <option value="">{t('structuredTargetNone')}</option>
+                <option value=">=">&ge;</option>
+                <option value="<=">&le;</option>
+                <option value="=">=</option>
+              </select>
+              <input type="number" step="any" value={targetNumeric} onChange={e => setTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none" />
             </div>
           </div>
           <div className="mt-4 flex justify-end">
@@ -293,6 +319,18 @@ export default function SLACriteria() {
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">{t('opTarget')}</label>
                   <input required type="text" value={editTargetValue} onChange={e => setEditTargetValue(e.target.value)} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">{t('structuredTargetOptional')}</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <select value={editTargetOperator} onChange={e => setEditTargetOperator(e.target.value)} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:outline-none">
+                      <option value="">{t('structuredTargetNone')}</option>
+                      <option value=">=">&ge;</option>
+                      <option value="<=">&le;</option>
+                      <option value="=">=</option>
+                    </select>
+                    <input type="number" step="any" value={editTargetNumeric} onChange={e => setEditTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">{t('departmentScope')}</label>

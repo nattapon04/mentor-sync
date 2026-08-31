@@ -46,11 +46,13 @@ func (h *Handlers) GetDepartments(c *fiber.Ctx) error {
 // generating its own.
 func (h *Handlers) CreateSLARule(c *fiber.Ctx) error {
 	type CreateInput struct {
-		Name        string            `json:"name" validate:"required"`
-		MetricType  models.MetricType `json:"metric_type" validate:"required,oneof=quality velocity soft_skill"`
-		EvalType    models.EvalType   `json:"eval_type" validate:"omitempty,oneof=ticket sprint both"`
-		TargetValue string            `json:"target_value" validate:"required"`
-		Scope       string            `json:"scope"`
+		Name           string            `json:"name" validate:"required"`
+		MetricType     models.MetricType `json:"metric_type" validate:"required,oneof=quality velocity soft_skill"`
+		EvalType       models.EvalType   `json:"eval_type" validate:"omitempty,oneof=ticket sprint both"`
+		TargetValue    string            `json:"target_value" validate:"required"`
+		TargetOperator string            `json:"target_operator" validate:"omitempty,oneof=>= <= ="`
+		TargetNumeric  *float64          `json:"target_numeric"`
+		Scope          string            `json:"scope"`
 	}
 	var input CreateInput
 	if !bindAndValidate(c, &input) {
@@ -58,12 +60,14 @@ func (h *Handlers) CreateSLARule(c *fiber.Ctx) error {
 	}
 
 	rule := models.SLARule{
-		Name:        input.Name,
-		MetricType:  input.MetricType,
-		EvalType:    input.EvalType,
-		TargetValue: input.TargetValue,
-		Scope:       input.Scope,
-		IsActive:    true,
+		Name:           input.Name,
+		MetricType:     input.MetricType,
+		EvalType:       input.EvalType,
+		TargetValue:    input.TargetValue,
+		TargetOperator: input.TargetOperator,
+		TargetNumeric:  input.TargetNumeric,
+		Scope:          input.Scope,
+		IsActive:       true,
 	}
 	if err := h.DB.Create(&rule).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())
@@ -83,11 +87,13 @@ func (h *Handlers) UpdateSLARule(c *fiber.Ctx) error {
 	}
 
 	type UpdateInput struct {
-		Name        string            `json:"name" validate:"required"`
-		MetricType  models.MetricType `json:"metric_type" validate:"required,oneof=quality velocity soft_skill"`
-		EvalType    models.EvalType   `json:"eval_type" validate:"omitempty,oneof=ticket sprint both"`
-		TargetValue string            `json:"target_value" validate:"required"`
-		Scope       string            `json:"scope"`
+		Name           string            `json:"name" validate:"required"`
+		MetricType     models.MetricType `json:"metric_type" validate:"required,oneof=quality velocity soft_skill"`
+		EvalType       models.EvalType   `json:"eval_type" validate:"omitempty,oneof=ticket sprint both"`
+		TargetValue    string            `json:"target_value" validate:"required"`
+		TargetOperator string            `json:"target_operator" validate:"omitempty,oneof=>= <= ="`
+		TargetNumeric  *float64          `json:"target_numeric"`
+		Scope          string            `json:"scope"`
 	}
 	var input UpdateInput
 	if !bindAndValidate(c, &input) {
@@ -98,6 +104,8 @@ func (h *Handlers) UpdateSLARule(c *fiber.Ctx) error {
 	rule.MetricType = input.MetricType
 	rule.EvalType = input.EvalType
 	rule.TargetValue = input.TargetValue
+	rule.TargetOperator = input.TargetOperator
+	rule.TargetNumeric = input.TargetNumeric
 	rule.Scope = input.Scope
 
 	if err := h.DB.Save(&rule).Error; err != nil {

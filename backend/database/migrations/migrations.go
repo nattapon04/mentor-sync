@@ -103,6 +103,22 @@ func all() []*gormigrate.Migration {
 				return tx.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version bigint NOT NULL DEFAULT 0`).Error
 			},
 		},
+		{
+			// Adds an optional structured (operator, numeric) form of SLARule.TargetValue, so
+			// Focus Areas (frontend gap analysis) can compute an actual numeric gap-to-target
+			// instead of only a pass/fail rate. Existing rules keep working unchanged — these
+			// columns are nullable and TargetValue stays the source of truth for display.
+			ID: "202608310002_add_sla_rules_target_operator_numeric",
+			Migrate: func(tx *gorm.DB) error {
+				if err := tx.Exec(`ALTER TABLE sla_rules ADD COLUMN IF NOT EXISTS target_operator varchar(2)`).Error; err != nil {
+					return err
+				}
+				if err := tx.Exec(`ALTER TABLE sla_rules ADD COLUMN IF NOT EXISTS target_numeric double precision`).Error; err != nil {
+					return err
+				}
+				return backfillSLARuleTargetNumerics(tx)
+			},
+		},
 	}
 }
 
