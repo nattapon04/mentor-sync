@@ -14,6 +14,8 @@ type CreateEvaluationInput struct {
 	EvaluatorID    uuid.UUID                 `json:"evaluator_id"`
 	EvaluationType string                    `json:"evaluation_type" validate:"omitempty,oneof=ticket sprint"`
 	ReferenceID    string                    `json:"reference_id" validate:"required"`
+	// SprintName only applies when EvaluationType is "ticket" — see models.JiraEvaluation.
+	SprintName     string                    `json:"sprint_name"`
 	Metrics        []models.EvaluationMetric `json:"metrics"`
 }
 
@@ -40,6 +42,20 @@ func (h *Handlers) GetEvaluations(c *fiber.Ctx) error {
 	return c.JSON(evaluations)
 }
 
+// GetSprints returns every distinct sprint name a ticket evaluation has been tagged with, for
+// the evaluate-form/report-filter autocomplete — mirrors GetDepartments. Restricted to
+// evaluation_type "ticket" since sprint_name is only ever meant to be set there.
+func (h *Handlers) GetSprints(c *fiber.Ctx) error {
+	sprints, err := distinctNonEmptyStrings(
+		h.DB.Model(&models.JiraEvaluation{}).Where("evaluation_type = ?", "ticket"),
+		"sprint_name",
+	)
+	if err != nil {
+		return respondError(c, fiber.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(sprints)
+}
+
 // CreateEvaluation creates an evaluation and its metrics in a transaction
 func (h *Handlers) CreateEvaluation(c *fiber.Ctx) error {
 	var input CreateEvaluationInput
@@ -61,6 +77,9 @@ func (h *Handlers) CreateEvaluation(c *fiber.Ctx) error {
 
 	if evaluation.EvaluationType == "" {
 		evaluation.EvaluationType = "ticket"
+	}
+	if evaluation.EvaluationType == "ticket" {
+		evaluation.SprintName = input.SprintName
 	}
 
 	err := h.DB.Transaction(func(tx *gorm.DB) error {

@@ -68,6 +68,7 @@ func Register(app *fiber.App, h *handlers.Handlers, corsAllowOrigins string) {
 	api.Get("/evaluations", h.GetEvaluations)
 	api.Post("/evaluations", mentorOrAdmin, h.CreateEvaluation)
 	api.Delete("/evaluations/:id", mentorOrAdmin, h.DeleteEvaluation)
+	api.Get("/sprints", h.GetSprints)
 
 	// Badges — mentors award/revoke; mentees need to read their own badges.
 	api.Get("/badges", h.GetEarnedBadges)

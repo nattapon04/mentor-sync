@@ -35,6 +35,8 @@ export default function MenteeDetail() {
   const [metricInputs, setMetricInputs] = useState<MetricInput[]>([]);
   const [evaluationType, setEvaluationType] = useState<"ticket" | "sprint">("ticket");
   const [referenceId, setReferenceId] = useState("");
+  const [sprintTag, setSprintTag] = useState("");
+  const [knownSprints, setKnownSprints] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [evalSuccess, setEvalSuccess] = useState(false);
 
@@ -91,6 +93,11 @@ export default function MenteeDetail() {
 
   useEffect(() => { fetchData(); }, [token, menteeId, timeRange]);
 
+  useEffect(() => {
+    if (!token) return;
+    api.get("/sprints").then(({ data }) => setKnownSprints(Array.isArray(data) ? data : [])).catch(() => {});
+  }, [token]);
+
   // ----- ACTIONS -----
   const handleSubmitEval = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +110,7 @@ export default function MenteeDetail() {
         evaluator_id: loggedInUser.id,
         evaluation_type: evaluationType,
         reference_id: referenceId,
+        sprint_name: evaluationType === "ticket" ? sprintTag.trim() : "",
         metrics: metricInputs.filter(m => m.is_enabled && visibleRuleIds.has(m.sla_rule_id)).map(m => ({
           sla_rule_id: m.sla_rule_id,
           value_numeric: m.value_numeric ? parseFloat(m.value_numeric) : null,
@@ -116,6 +124,7 @@ export default function MenteeDetail() {
       await api.post("/evaluations", payload);
       setEvalSuccess(true);
       setReferenceId("");
+      setSprintTag("");
       setError(null);
       setTimeout(() => { setEvalSuccess(false); setActiveTab("history"); fetchData(); }, 2000);
     } catch (err) { setError(getErrorMessage(err, t('failedToSubmitEvaluation'))); }
@@ -431,6 +440,22 @@ export default function MenteeDetail() {
                     </label>
                     <input type="text" required value={referenceId} onChange={e => setReferenceId(e.target.value)} placeholder={evaluationType === "ticket" ? t('egProj1234') : t('egSprint45')} className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:outline-none" />
                   </div>
+                  {evaluationType === "ticket" && (
+                    <div>
+                      <label className="block text-sm font-bold text-foreground mb-1">{t('ticketSprintTagLabel')}</label>
+                      <input
+                        type="text"
+                        list="known-sprints"
+                        value={sprintTag}
+                        onChange={e => setSprintTag(e.target.value)}
+                        placeholder={t('egSprint45')}
+                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                      />
+                      <datalist id="known-sprints">
+                        {knownSprints.map(s => <option key={s} value={s} />)}
+                      </datalist>
+                    </div>
+                  )}
                 </div>
                 <div className="p-6 space-y-4">
                   {visibleRules.map((rule) => {

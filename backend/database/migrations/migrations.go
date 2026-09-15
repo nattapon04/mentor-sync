@@ -177,6 +177,15 @@ func all() []*gormigrate.Migration {
 			},
 		},
 		{
+			// Tags a ticket evaluation with which sprint it belongs to (manually entered — no
+			// live Jira integration), so ticket evaluations can be rolled up by sprint instead
+			// of only by a rolling date range. See models.JiraEvaluation.SprintName.
+			ID: "202609150001_add_sprint_name_to_evaluations",
+			Migrate: func(tx *gorm.DB) error {
+				return tx.Exec(`ALTER TABLE jira_evaluations ADD COLUMN IF NOT EXISTS sprint_name varchar(100)`).Error
+			},
+		},
+		{
 			// jira_ticket_id predates reference_id (the column models.JiraEvaluation actually
 			// uses today) and was left behind NOT NULL with no default — every CreateEvaluation
 			// insert has been failing a not-null violation on it ever since, since no current

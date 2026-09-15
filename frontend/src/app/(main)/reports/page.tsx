@@ -191,21 +191,31 @@ export default function Reports() {
   const [mentors, setMentors] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("30");
-  // A mentor sees only their own mentees by default; an admin with no mentor role of their own
-  // has no "own mentees" to scope to, so they still default to the full team-wide view.
-  const [mentorFilter, setMentorFilter] = useState<string>(() =>
-    user?.roles?.includes("mentor") ? user.id : ""
-  );
+  const [mentorFilter, setMentorFilter] = useState<string>("");
+  const [sprintFilter, setSprintFilter] = useState<string>("");
+  const [sprints, setSprints] = useState<string[]>([]);
   const [search, setSearch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch available mentors for the filter dropdown
+  // Only an admin can browse other mentors' teams via the filter dropdown — a non-admin mentor
+  // is always scoped to their own mentees, regardless of mentorFilter's (unreachable) state.
+  const isAdmin = user?.roles?.includes("admin") ?? false;
+  const effectiveMentorFilter = isAdmin ? mentorFilter : (user?.id ?? "");
+
+  // Fetch available mentors for the filter dropdown (admin only — a non-admin mentor has no
+  // dropdown to populate).
   useEffect(() => {
-    if (!token) return;
+    if (!token || !isAdmin) return;
     api.get("/users").then(({ data }) => {
       const list: User[] = Array.isArray(data) ? data : data.data ?? [];
       setMentors(list.filter((u) => u.roles?.includes("mentor")));
     }).catch(() => {});
+  }, [token, isAdmin]);
+
+  // Sprint options for the filter dropdown.
+  useEffect(() => {
+    if (!token) return;
+    api.get<string[]>("/sprints").then(({ data }) => setSprints(Array.isArray(data) ? data : [])).catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -214,9 +224,13 @@ export default function Reports() {
       setIsLoading(true);
       try {
         const params: Record<string, string> = {};
-        const startDate = getStartDateParam(timeRange);
-        if (startDate) params.start_date = startDate;
-        if (mentorFilter) params.mentor_id = mentorFilter;
+        if (sprintFilter) {
+          params.sprint = sprintFilter;
+        } else {
+          const startDate = getStartDateParam(timeRange);
+          if (startDate) params.start_date = startDate;
+        }
+        if (effectiveMentorFilter) params.mentor_id = effectiveMentorFilter;
         const { data } = await api.get<MenteeReportsResponse>("/reports/mentees", { params });
         setReportData(data);
         setError(null);
@@ -227,7 +241,7 @@ export default function Reports() {
       }
     };
     fetchReports();
-  }, [token, timeRange, mentorFilter]);
+  }, [token, timeRange, sprintFilter, effectiveMentorFilter]);
 
   // Client-side search filter
   const filtered = (reportData?.mentees ?? []).filter((r) =>
@@ -264,20 +278,34 @@ export default function Reports() {
             onChange={(e) => setSearch(e.target.value)}
             className="bg-card border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 w-40"
           />
+          {isAdmin && (
+            <select
+              value={mentorFilter}
+              onChange={(e) => setMentorFilter(e.target.value)}
+              className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">All Mentors</option>
+              {mentors.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          )}
           <select
-            value={mentorFilter}
-            onChange={(e) => setMentorFilter(e.target.value)}
+            value={sprintFilter}
+            onChange={(e) => setSprintFilter(e.target.value)}
             className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option value="">All Mentors</option>
-            {mentors.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
+            <option value="">All Sprints</option>
+            {sprints.map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            disabled={!!sprintFilter}
+            title={sprintFilter ? "Ignored while a sprint is selected" : undefined}
+            className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
           >
             {TIME_RANGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>

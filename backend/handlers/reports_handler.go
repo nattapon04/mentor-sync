@@ -179,10 +179,30 @@ type MenteeReportsResponse struct {
 
 // GetMenteeReports returns per-mentee performance stats for the Mentee-centric report page.
 // Supports ?start_date= and ?end_date= for date filtering, and ?mentor_id= to scope to one mentor's mentees.
+// ?sprint= scopes evaluations to ticket evaluations tagged with that sprint instead of the date
+// range — start_date/end_date are ignored entirely when sprint is set. Badges and notes have no
+// sprint_name of their own, so they're scoped to the date span the sprint's evaluations actually
+// fall within, keeping every count on a report card consistent with the others.
+// A non-admin mentor may only ever see their own mentees: an explicit ?mentor_id= for anyone
+// else is rejected, and an unfiltered request (which would otherwise mean "everyone") is
+// silently scoped to their own id instead. Only an admin gets the unrestricted team-wide view.
 func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
+	sprintFilter := c.Query("sprint")
 	mentorIDFilter := c.Query("mentor_id")
+
+	if mentorIDFilter != "" {
+		if !callerIsSelfOrAdmin(c, mentorIDFilter) {
+			return respondError(c, fiber.StatusForbidden, "You can only view your own mentees")
+		}
+	} else if !callerIsAdmin(c) {
+		id := callerID(c)
+		if id == "" {
+			return respondError(c, fiber.StatusUnauthorized, "Unauthorized")
+		}
+		mentorIDFilter = id
+	}
 
 	// 1. Fetch mentees — optionally filtered to those under a specific mentor.
 	var mentees []models.User
@@ -255,14 +275,19 @@ func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 		}
 	}
 
-	// 3. Fetch all evaluations (with metrics) for these mentees, scoped to the date range.
+	// 3. Fetch all evaluations (with metrics) for these mentees, scoped to the date range —
+	// or, when sprintFilter is set, to that sprint's ticket evaluations instead.
 	var evaluations []models.JiraEvaluation
 	evalQuery := h.DB.Preload("Metrics").Where("mentee_id IN ?", menteeIDs)
-	if startDate != "" {
-		evalQuery = evalQuery.Where("created_at >= ?", startDate)
-	}
-	if endDate != "" {
-		evalQuery = evalQuery.Where("created_at <= ?", endDate+" 23:59:59")
+	if sprintFilter != "" {
+		evalQuery = evalQuery.Where("evaluation_type = ? AND sprint_name = ?", "ticket", sprintFilter)
+	} else {
+		if startDate != "" {
+			evalQuery = evalQuery.Where("created_at >= ?", startDate)
+		}
+		if endDate != "" {
+			evalQuery = evalQuery.Where("created_at <= ?", endDate+" 23:59:59")
+		}
 	}
 	if err := evalQuery.Order("created_at asc").Find(&evaluations).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())
@@ -301,6 +326,31 @@ func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 		evalsByMentee[ev.MenteeID] = append(evalsByMentee[ev.MenteeID], evalRate)
 	}
 
+	// 3b. Badges and notes have no sprint_name of their own to scope by — when sprintFilter is
+	// set, derive an implicit window from the bounds of that sprint's own evaluations (already
+	// fetched above) instead, so the counts on the same card stay consistent with each other
+	// rather than badges/notes silently falling back to all-time totals next to a sprint-scoped
+	// pass rate. A sprint with no evaluations gets no badges/notes either (badgeNoteMatchNone).
+	badgeNoteStart, badgeNoteEnd := startDate, endDate
+	badgeNoteMatchNone := false
+	if sprintFilter != "" {
+		if len(evaluations) == 0 {
+			badgeNoteMatchNone = true
+		} else {
+			minT, maxT := evaluations[0].CreatedAt, evaluations[0].CreatedAt
+			for _, ev := range evaluations[1:] {
+				if ev.CreatedAt.Before(minT) {
+					minT = ev.CreatedAt
+				}
+				if ev.CreatedAt.After(maxT) {
+					maxT = ev.CreatedAt
+				}
+			}
+			badgeNoteStart = minT.Format("2006-01-02")
+			badgeNoteEnd = maxT.Format("2006-01-02")
+		}
+	}
+
 	// 4. Fetch badges for these mentees.
 	type badgeCount struct {
 		MenteeID uuid.UUID
@@ -311,11 +361,15 @@ func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 		Select("mentee_id, COUNT(*) as count").
 		Where("mentee_id IN ?", menteeIDs).
 		Group("mentee_id")
-	if startDate != "" {
-		badgeQuery = badgeQuery.Where("created_at >= ?", startDate)
-	}
-	if endDate != "" {
-		badgeQuery = badgeQuery.Where("created_at <= ?", endDate+" 23:59:59")
+	if badgeNoteMatchNone {
+		badgeQuery = badgeQuery.Where("1 = 0")
+	} else {
+		if badgeNoteStart != "" {
+			badgeQuery = badgeQuery.Where("created_at >= ?", badgeNoteStart)
+		}
+		if badgeNoteEnd != "" {
+			badgeQuery = badgeQuery.Where("created_at <= ?", badgeNoteEnd+" 23:59:59")
+		}
 	}
 	if err := badgeQuery.Scan(&badgeCounts).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())
@@ -328,11 +382,15 @@ func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 	// 5. Fetch notes for these mentees.
 	var notes []models.GeneralNote
 	noteQuery := h.DB.Where("mentee_id IN ?", menteeIDs)
-	if startDate != "" {
-		noteQuery = noteQuery.Where("created_at >= ?", startDate)
-	}
-	if endDate != "" {
-		noteQuery = noteQuery.Where("created_at <= ?", endDate+" 23:59:59")
+	if badgeNoteMatchNone {
+		noteQuery = noteQuery.Where("1 = 0")
+	} else {
+		if badgeNoteStart != "" {
+			noteQuery = noteQuery.Where("created_at >= ?", badgeNoteStart)
+		}
+		if badgeNoteEnd != "" {
+			noteQuery = noteQuery.Where("created_at <= ?", badgeNoteEnd+" 23:59:59")
+		}
 	}
 	if err := noteQuery.Find(&notes).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())

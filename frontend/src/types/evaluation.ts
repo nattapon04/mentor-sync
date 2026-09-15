@@ -18,6 +18,8 @@ export interface Evaluation {
   evaluator_id: string;
   evaluation_type: string;
   reference_id: string;
+  /** Only meaningful when evaluation_type is "ticket" — see backend JiraEvaluation.SprintName. */
+  sprint_name?: string;
   mentee?: User;
   evaluator?: User;
   metrics?: EvaluationMetric[];
