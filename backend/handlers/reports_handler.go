@@ -363,9 +363,13 @@ func (h *Handlers) GetMenteeReports(c *fiber.Ctx) error {
 			passRate = float64(stats.passed) / float64(stats.total) * 100
 		}
 
-		// Keep only last 6 evaluations for the sparkline trend.
+		// Keep only last 6 evaluations for the sparkline trend. A mentee with no evaluations
+		// in range has no entry in evalsByMentee, and a missing map key gives the zero value —
+		// nil for a slice — which would serialize as JSON null and crash the frontend's .map().
 		trend := evalsByMentee[m.ID]
-		if len(trend) > 6 {
+		if trend == nil {
+			trend = []float64{}
+		} else if len(trend) > 6 {
 			trend = trend[len(trend)-6:]
 		}
 

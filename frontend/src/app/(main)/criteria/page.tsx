@@ -208,7 +208,7 @@ export default function SLACriteria() {
           </div>
           <div className="mt-4">
             <label className="block text-sm font-semibold text-foreground/80 mb-1.5">{t('structuredTargetOptional')}</label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 gap-4 max-w-md">
               <select value={targetOperator} onChange={e => setTargetOperator(e.target.value)} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:outline-none">
                 <option value="">{t('structuredTargetNone')}</option>
                 <option value=">=">&ge;</option>
@@ -216,11 +216,11 @@ export default function SLACriteria() {
                 <option value="=">=</option>
               </select>
               <input type="number" step="any" disabled={targetRelativeToEstimate} value={targetNumeric} onChange={e => setTargetNumeric(e.target.value)} placeholder={t('numericTargetLabel')} className="w-full border border-border rounded-xl p-2.5 text-sm bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-50" />
-              <label className="flex items-center gap-2 text-sm text-foreground/80 md:col-span-3">
-                <input type="checkbox" checked={targetRelativeToEstimate} onChange={e => setTargetRelativeToEstimate(e.target.checked)} className="w-4 h-4 rounded border-border" />
-                {t('targetRelativeToEstimateLabel')}
-              </label>
             </div>
+            <label className="flex items-center gap-2 text-sm text-foreground/80 mt-2">
+              <input type="checkbox" checked={targetRelativeToEstimate} onChange={e => setTargetRelativeToEstimate(e.target.checked)} className="w-4 h-4 rounded border-border" />
+              {t('targetRelativeToEstimateLabel')}
+            </label>
           </div>
           <div className="mt-4 flex justify-end">
             <button type="submit" disabled={isSaving} className="bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
