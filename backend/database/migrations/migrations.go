@@ -152,6 +152,15 @@ func all() []*gormigrate.Migration {
 			// written by any new code path.
 			ID: "202609140001_create_mentorships_table",
 			Migrate: func(tx *gorm.DB) error {
+				// This migration previously errored out (an earlier draft of the Mentorship
+				// model auto-migrated a table shape that a later step here couldn't work
+				// with), and since it never got recorded as applied, every boot retried it
+				// against that same stuck table. AutoMigrate won't reshape an existing table
+				// to match, so drop it first — safe because a migration that has never
+				// completed can't have any real mentorship data to lose.
+				if err := tx.Exec(`DROP TABLE IF EXISTS mentorships`).Error; err != nil {
+					return err
+				}
 				if err := tx.AutoMigrate(&models.Mentorship{}); err != nil {
 					return err
 				}
@@ -163,7 +172,7 @@ func all() []*gormigrate.Migration {
 					FROM users
 					WHERE manager_id IS NOT NULL
 					  AND deleted_at IS NULL
-					ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING
+					ON CONFLICT (mentor_id, mentee_id) DO NOTHING
 				`).Error
 			},
 		},

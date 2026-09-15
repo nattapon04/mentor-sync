@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit2, Trash2, ShieldAlert, User as UserIcon, Code2, UserCog } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, ShieldAlert, User as UserIcon, Code2, UserCog, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -47,6 +47,7 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRoles, setNewRoles] = useState<Role[]>(["mentee"]);
   const [newDept, setNewDept] = useState("Engineering");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Assign Mentors modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -116,6 +117,7 @@ export default function AdminUsersPage() {
     setNewPassword("");
     setNewRoles(["mentee"]);
     setNewDept("Engineering");
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -126,6 +128,7 @@ export default function AdminUsersPage() {
     setNewPassword("");
     setNewRoles((user.roles as Role[]) ?? ["mentee"]);
     setNewDept(user.department ?? "");
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -310,7 +313,18 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">{editingUserId ? t('newPasswordBlank') : t('temporaryPassword')}</label>
-                  <input required={!editingUserId} type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20" />
+                  <div className="relative">
+                    <input required={!editingUserId} type={showPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-2 pr-10 text-sm focus:ring-2 focus:ring-primary/20" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Multi-Role Checkboxes */}

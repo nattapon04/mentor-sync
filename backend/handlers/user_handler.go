@@ -186,7 +186,7 @@ func (h *Handlers) AssignMentee(c *fiber.Ctx) error {
 	if err := h.DB.Exec(
 		`INSERT INTO mentorships (id, mentor_id, mentee_id, created_at)
 		 VALUES (gen_random_uuid(), ?, ?, NOW())
-		 ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING`,
+		 ON CONFLICT (mentor_id, mentee_id) DO NOTHING`,
 		mentorUUID, menteeUUID,
 	).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, "Failed to assign mentee")
@@ -272,7 +272,7 @@ func (h *Handlers) AdminAssignMentors(c *fiber.Ctx) error {
 			if err := tx.Exec(
 				`INSERT INTO mentorships (id, mentor_id, mentee_id, created_at)
 				 VALUES (gen_random_uuid(), ?, ?, NOW())
-				 ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING`,
+				 ON CONFLICT (mentor_id, mentee_id) DO NOTHING`,
 				mentorID, menteeId,
 			).Error; err != nil {
 				return err

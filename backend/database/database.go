@@ -7,6 +7,7 @@ import (
 
 	"github.com/nattapon/mentorsync/config"
 	"github.com/nattapon/mentorsync/database/migrations"
+	"github.com/nattapon/mentorsync/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -21,7 +22,22 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, cfg.DBSSLMode,
 	)
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Without this, GORM manages the "mentorships" table itself using its own implicit
+	// two-column join-table shape for User.Mentors/Mentees — silently ignoring the extra
+	// id/created_at fields on the explicit Mentorship model whenever it (re)creates the table.
+	if err := db.SetupJoinTable(&models.User{}, "Mentors", &models.Mentorship{}); err != nil {
+		return nil, err
+	}
+	if err := db.SetupJoinTable(&models.User{}, "Mentees", &models.Mentorship{}); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 // ConnectDB connects and sets the package-level DB, exiting fatally on failure. For use at

@@ -29,7 +29,7 @@ describe("Login page", () => {
   it("renders the email/password form", () => {
     renderWithProviders(<Login />);
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i, { selector: "input" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
@@ -40,7 +40,7 @@ describe("Login page", () => {
 
     renderWithProviders(<Login />);
     await userEvent.type(screen.getByLabelText(/email address/i), "ann@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "correct-password");
+    await userEvent.type(screen.getByLabelText(/password/i, { selector: "input" }), "correct-password");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/my-dashboard"));
@@ -54,7 +54,7 @@ describe("Login page", () => {
 
     renderWithProviders(<Login />);
     await userEvent.type(screen.getByLabelText(/email address/i), "ann@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "wrong-password");
+    await userEvent.type(screen.getByLabelText(/password/i, { selector: "input" }), "wrong-password");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     expect(await screen.findByText("Invalid email or password")).toBeInTheDocument();
