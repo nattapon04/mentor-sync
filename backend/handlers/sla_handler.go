@@ -30,11 +30,8 @@ func (h *Handlers) GetSLARules(c *fiber.Ctx) error {
 
 // GetDepartments returns distinct departments from all users
 func (h *Handlers) GetDepartments(c *fiber.Ctx) error {
-	var departments []string
-	if err := h.DB.Model(&models.User{}).
-		Where("department != ''").
-		Distinct("department").
-		Pluck("department", &departments).Error; err != nil {
+	departments, err := distinctNonEmptyStrings(h.DB.Model(&models.User{}), "department")
+	if err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(departments)
