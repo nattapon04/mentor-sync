@@ -176,6 +176,24 @@ func all() []*gormigrate.Migration {
 				`).Error
 			},
 		},
+		{
+			// jira_ticket_id predates reference_id (the column models.JiraEvaluation actually
+			// uses today) and was left behind NOT NULL with no default — every CreateEvaluation
+			// insert has been failing a not-null violation on it ever since, since no current
+			// code path writes to it. Nothing in the codebase reads or writes this column.
+			ID: "202609150002_drop_stale_jira_ticket_id_column",
+			Migrate: func(tx *gorm.DB) error {
+				// Backfill first: any row an old code path wrote to jira_ticket_id but never
+				// got a reference_id keeps that value instead of losing it silently.
+				if err := tx.Exec(`
+					UPDATE jira_evaluations SET reference_id = jira_ticket_id
+					WHERE (reference_id IS NULL OR reference_id = '') AND jira_ticket_id IS NOT NULL
+				`).Error; err != nil {
+					return err
+				}
+				return tx.Exec(`ALTER TABLE jira_evaluations DROP COLUMN IF EXISTS jira_ticket_id`).Error
+			},
+		},
 	}
 }
 
