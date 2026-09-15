@@ -144,6 +144,29 @@ func all() []*gormigrate.Migration {
 				return tx.Exec(`ALTER TABLE evaluation_metrics ADD COLUMN IF NOT EXISTS estimate_numeric double precision`).Error
 			},
 		},
+		{
+			// Replaces the single manager_id FK with a many-to-many mentorships junction table,
+			// allowing a mentee to have multiple mentors. Existing manager_id data is backfilled
+			// into the new table so no relationships are lost. manager_id itself is kept on the
+			// users table as a deprecated field for backward-compatibility — it is no longer
+			// written by any new code path.
+			ID: "202609140001_create_mentorships_table",
+			Migrate: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&models.Mentorship{}); err != nil {
+					return err
+				}
+				// Backfill: copy every existing manager_id → mentorships row, skipping
+				// pairs that are already there (idempotent re-run safety).
+				return tx.Exec(`
+					INSERT INTO mentorships (id, mentor_id, mentee_id, created_at)
+					SELECT gen_random_uuid(), manager_id, id, NOW()
+					FROM users
+					WHERE manager_id IS NOT NULL
+					  AND deleted_at IS NULL
+					ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING
+				`).Error
+			},
+		},
 	}
 }
 

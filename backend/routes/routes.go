@@ -51,6 +51,9 @@ func Register(app *fiber.App, h *handlers.Handlers, corsAllowOrigins string) {
 	api.Post("/users/:mentorId/unassign-mentee", mentorOrAdmin, h.UnassignMentee)
 	api.Put("/users/:id/preferences", h.UpdatePreferences)
 
+	// Admin-only: assign the full set of mentors for any mentee (many-to-many replacement).
+	api.Put("/admin/mentees/:menteeId/mentors", adminOnly, h.AdminAssignMentors)
+
 	// SLA Rules — mentors configure SLAs per docs/BA_REQUIREMENTS.md; reads stay open (the
 	// evaluation form needs them regardless of the caller's role).
 	api.Get("/sla-rules", h.GetSLARules)
@@ -77,6 +80,7 @@ func Register(app *fiber.App, h *handlers.Handlers, corsAllowOrigins string) {
 	api.Put("/notes/:id", mentorOrAdmin, h.UpdateNote)
 	api.Delete("/notes/:id", mentorOrAdmin, h.DeleteNote)
 
-	// Reports — team-wide rollups are a mentor/admin view.
+	// Reports — team-wide rollups and mentee-centric views are mentor/admin only.
 	api.Get("/reports/team", mentorOrAdmin, h.GetTeamReports)
+	api.Get("/reports/mentees", mentorOrAdmin, h.GetMenteeReports)
 }

@@ -7,13 +7,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/nattapon/mentorsync/models"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // GetUsers returns every user (not filtered by the caller's role or department) — pagination
 // via ?page=&limit=, free-text search via ?search=.
 func (h *Handlers) GetUsers(c *fiber.Ctx) error {
 	var users []models.User
-	query := h.DB.Preload("Manager")
+	query := h.DB.Preload("Manager").Preload("Mentors")
 
 	// Search
 	if search := c.Query("search"); search != "" {
@@ -149,10 +150,12 @@ func (h *Handlers) DeleteUser(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// Mentor Add Mentee
+// AssignMentee lets a mentor (or admin acting as that mentor) add a mentee to their roster.
+// Inserts a row in the mentorships junction table; duplicate pairs are silently ignored.
 func (h *Handlers) AssignMentee(c *fiber.Ctx) error {
 	mentorId := c.Params("mentorId")
-	if _, err := uuid.Parse(mentorId); err != nil {
+	mentorUUID, err := uuid.Parse(mentorId)
+	if err != nil {
 		return respondError(c, fiber.StatusBadRequest, "Invalid mentor ID")
 	}
 	// RequireRole only checked that the caller holds the mentor/admin role, not that mentorId
@@ -174,13 +177,24 @@ func (h *Handlers) AssignMentee(c *fiber.Ctx) error {
 		return respondError(c, fiber.StatusNotFound, "Mentee not found")
 	}
 
-	if err := h.DB.Model(&mentee).Update("manager_id", mentorId).Error; err != nil {
+	menteeUUID, err := uuid.Parse(input.MenteeID)
+	if err != nil {
+		return respondError(c, fiber.StatusBadRequest, "Invalid mentee ID")
+	}
+
+	// Insert into the junction table; ON CONFLICT DO NOTHING makes this idempotent.
+	if err := h.DB.Exec(
+		`INSERT INTO mentorships (id, mentor_id, mentee_id, created_at)
+		 VALUES (gen_random_uuid(), ?, ?, NOW())
+		 ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING`,
+		mentorUUID, menteeUUID,
+	).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, "Failed to assign mentee")
 	}
 	return c.JSON(fiber.Map{"message": "Mentee assigned successfully"})
 }
 
-// Mentor Remove Mentee
+// UnassignMentee lets a mentor (or admin acting as that mentor) remove a mentee from their roster.
 func (h *Handlers) UnassignMentee(c *fiber.Ctx) error {
 	mentorId := c.Params("mentorId")
 	if _, err := uuid.Parse(mentorId); err != nil {
@@ -198,20 +212,79 @@ func (h *Handlers) UnassignMentee(c *fiber.Ctx) error {
 		return nil
 	}
 
+	result := h.DB.Where("mentor_id = ? AND mentee_id = ?", mentorId, input.MenteeID).
+		Delete(&models.Mentorship{})
+	if result.Error != nil {
+		return respondError(c, fiber.StatusInternalServerError, "Failed to unassign mentee")
+	}
+	if result.RowsAffected == 0 {
+		return respondError(c, fiber.StatusNotFound, "Mentorship not found")
+	}
+	return c.JSON(fiber.Map{"message": "Mentee unassigned successfully"})
+}
+
+// AdminAssignMentors lets an admin set the complete list of mentors for any mentee.
+// This is a full replacement — mentors not in the new list are removed, new ones are added.
+func (h *Handlers) AdminAssignMentors(c *fiber.Ctx) error {
+	menteeId := c.Params("menteeId")
+	if _, err := uuid.Parse(menteeId); err != nil {
+		return respondError(c, fiber.StatusBadRequest, "Invalid mentee ID")
+	}
+
+	type AdminAssignInput struct {
+		MentorIDs []string `json:"mentor_ids" validate:"required"`
+	}
+	var input AdminAssignInput
+	if !bindAndValidate(c, &input) {
+		return nil
+	}
+
+	// Validate that the mentee exists
 	var mentee models.User
-	if err := h.DB.First(&mentee, "id = ?", input.MenteeID).Error; err != nil {
+	if err := h.DB.First(&mentee, "id = ?", menteeId).Error; err != nil {
 		return respondError(c, fiber.StatusNotFound, "Mentee not found")
 	}
 
-	// Verify mentor
-	if mentee.ManagerID == nil || mentee.ManagerID.String() != mentorId {
-		return respondError(c, fiber.StatusForbidden, "Mentee does not belong to this mentor")
+	// Reject a mentee being listed as their own mentor.
+	for _, mentorID := range input.MentorIDs {
+		if mentorID == menteeId {
+			return respondError(c, fiber.StatusBadRequest, "A mentee cannot be their own mentor")
+		}
 	}
 
-	if err := h.DB.Model(&mentee).Update("manager_id", nil).Error; err != nil {
-		return respondError(c, fiber.StatusInternalServerError, "Failed to unassign mentee")
+	// Validate all mentor IDs exist
+	if len(input.MentorIDs) > 0 {
+		var count int64
+		if err := h.DB.Model(&models.User{}).Where("id IN ?", input.MentorIDs).Count(&count).Error; err != nil {
+			return respondError(c, fiber.StatusInternalServerError, err.Error())
+		}
+		if int(count) != len(input.MentorIDs) {
+			return respondError(c, fiber.StatusBadRequest, "One or more mentor IDs are invalid")
+		}
 	}
-	return c.JSON(fiber.Map{"message": "Mentee unassigned successfully"})
+
+	// Replace mentor list in a transaction: delete current, insert new.
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("mentee_id = ?", menteeId).Delete(&models.Mentorship{}).Error; err != nil {
+			return err
+		}
+		for _, mentorID := range input.MentorIDs {
+			if err := tx.Exec(
+				`INSERT INTO mentorships (id, mentor_id, mentee_id, created_at)
+				 VALUES (gen_random_uuid(), ?, ?, NOW())
+				 ON CONFLICT ON CONSTRAINT idx_mentorships_pair DO NOTHING`,
+				mentorID, menteeId,
+			).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return respondError(c, fiber.StatusInternalServerError, "Failed to assign mentors")
+	}
+
+	return c.JSON(fiber.Map{"message": "Mentors assigned successfully"})
 }
 
 // Update UI Preferences

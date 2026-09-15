@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Plus, Edit2, Trash2, ShieldAlert, User as UserIcon, Code2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Plus, Edit2, Trash2, ShieldAlert, User as UserIcon, Code2, UserCog } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -47,6 +47,46 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRoles, setNewRoles] = useState<Role[]>(["mentee"]);
   const [newDept, setNewDept] = useState("Engineering");
+
+  // Assign Mentors modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assigningMentee, setAssigningMentee] = useState<User | null>(null);
+  const [allMentors, setAllMentors] = useState<User[]>([]);
+  const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>([]);
+
+  const fetchMentors = useCallback(async () => {
+    try {
+      const { data } = await api.get("/users");
+      const list = Array.isArray(data) ? data : data.data ?? [];
+      setAllMentors(list.filter((u: User) => u.roles?.includes("mentor")));
+    } catch { /* silently ignore — non-critical */ }
+  }, []);
+
+  const handleOpenAssignModal = (mentee: User) => {
+    setAssigningMentee(mentee);
+    setSelectedMentorIds((mentee.mentors ?? []).map((m) => m.id));
+    fetchMentors();
+    setAssignModalOpen(true);
+  };
+
+  const handleSaveAssignMentors = async () => {
+    if (!assigningMentee) return;
+    try {
+      await api.put(`/admin/mentees/${assigningMentee.id}/mentors`, { mentor_ids: selectedMentorIds });
+      setAssignModalOpen(false);
+      setError(null);
+      fetchUsers();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to assign mentors"));
+    }
+  };
+
+  const toggleMentor = (id: string) => {
+    setSelectedMentorIds((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  };
+
 
   const fetchUsers = async () => {
     try {
@@ -176,6 +216,7 @@ export default function AdminUsersPage() {
                 <th className="px-6 py-4 font-semibold">{t('userColumn')}</th>
                 <th className="px-6 py-4 font-semibold">{t('rolesColumn')}</th>
                 <th className="px-6 py-4 font-semibold">{t('departmentColumn')}</th>
+                <th className="px-6 py-4 font-semibold">Mentors</th>
                 <th className="px-6 py-4 font-semibold text-right">{t('actionsColumn')}</th>
               </tr>
             </thead>
@@ -194,7 +235,28 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-muted-foreground">{user.department}</td>
+                  <td className="px-6 py-4">
+                    {user.roles?.includes("mentee") ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(user.mentors ?? []).length > 0
+                          ? (user.mentors ?? []).map((m) => (
+                              <span key={m.id} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-md font-semibold">{m.name}</span>
+                            ))
+                          : <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                        }
+                      </div>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-6 py-4 text-right">
+                    {user.roles?.includes("mentee") && (
+                      <button
+                        onClick={() => handleOpenAssignModal(user)}
+                        className="p-2 text-muted-foreground hover:text-indigo-500 transition-colors"
+                        title="Assign Mentors"
+                      >
+                        <UserCog className="w-4 h-4" />
+                      </button>
+                    )}
                     <button onClick={() => handleOpenEditModal(user)} className="p-2 text-muted-foreground hover:text-primary transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -291,6 +353,75 @@ export default function AdminUsersPage() {
         onConfirm={confirmConfig.action}
         onCancel={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
       />
+
+      {/* Assign Mentors Modal */}
+      {assignModalOpen && assigningMentee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <UserCog className="w-5 h-5 text-indigo-500" />
+                  Assign Mentors
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Select mentors for <span className="font-semibold text-foreground">{assigningMentee.name}</span>
+                </p>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-xl p-3">
+                {allMentors.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No mentors found</p>
+                )}
+                {allMentors.map((mentor) => (
+                  <label
+                    key={mentor.id}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+                      selectedMentorIds.includes(mentor.id)
+                        ? "bg-indigo-500/10 border border-indigo-500/30"
+                        : "hover:bg-muted/50 border border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded accent-indigo-500"
+                      checked={selectedMentorIds.includes(mentor.id)}
+                      onChange={() => toggleMentor(mentor.id)}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-foreground">{mentor.name}</span>
+                      <span className="text-xs text-muted-foreground">{mentor.email}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {selectedMentorIds.length > 0 && (
+                <p className="text-xs text-indigo-500 font-semibold">
+                  {selectedMentorIds.length} mentor{selectedMentorIds.length > 1 ? "s" : ""} selected
+                </p>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-border bg-muted/30 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAssignMentors}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+              >
+                Save Assignments
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

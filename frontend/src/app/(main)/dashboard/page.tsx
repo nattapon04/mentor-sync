@@ -71,8 +71,8 @@ export default function Dashboard() {
     });
   };
 
-  const myMentees = allUsers.filter(u => u.manager_id === user?.id);
-  const availableMentees = allUsers.filter(u => u.roles?.includes("mentee") && !u.manager_id && u.id !== user?.id);
+  const myMentees = allUsers.filter(u => u.mentors?.some(m => m.id === user?.id));
+  const availableMentees = allUsers.filter(u => u.roles?.includes("mentee") && !u.mentors?.length && u.id !== user?.id);
 
   const getMenteeStatus = (menteeId: string) => {
     const menteeEvals = evaluations.filter(ev => ev.mentee?.id === menteeId);
