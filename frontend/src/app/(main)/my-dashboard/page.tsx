@@ -11,6 +11,7 @@ import { EarnedBadge, GeneralNote, Evaluation } from "@/types";
 import { TIME_RANGE_OPTIONS, TimeRange, getStartDateParam } from "@/lib/constants";
 import { DictionaryKey } from "@/locales/dictionary";
 import { FocusAreasPanel } from "@/components/FocusAreasPanel";
+import { InsightsPanel } from "@/components/InsightsPanel";
 
 export default function MyDashboard() {
   const { t } = useLanguage();
@@ -34,7 +35,7 @@ export default function MyDashboard() {
         const [evalsRes, badgesRes, notesRes] = await Promise.all([
           api.get("/evaluations", { params }),
           api.get("/badges", { params: { mentee_id: user.id } }),
-          api.get("/notes", { params: { mentee_id: user.id } })
+          api.get("/notes", { params })
         ]);
         setEvaluations(evalsRes.data);
         setBadges(badgesRes.data);
@@ -154,6 +155,8 @@ export default function MyDashboard() {
           </div>
         </div>
       </div>
+
+      <InsightsPanel evaluations={evaluations} badges={badges} notes={notes} />
 
       <FocusAreasPanel evaluations={evaluations} />
 

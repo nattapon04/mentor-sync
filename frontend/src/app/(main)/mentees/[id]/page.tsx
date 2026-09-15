@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGr
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { FocusAreasPanel } from "@/components/FocusAreasPanel";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import api, { getErrorMessage } from "@/lib/api";
 import { User as UserModel, SLARule, MetricInput, Evaluation, EarnedBadge, GeneralNote } from "@/types";
 import { TIME_RANGE_OPTIONS, TimeRange, getStartDateParam } from "@/lib/constants";
@@ -81,7 +82,7 @@ export default function MenteeDetail() {
       const [evalsRes, badgesRes, notesRes] = await Promise.all([
         api.get("/evaluations", { params: queryParams }),
         api.get("/badges", { params: { mentee_id: menteeId } }),
-        api.get("/notes", { params: { mentee_id: menteeId } })
+        api.get("/notes", { params: queryParams })
       ]);
       setEvaluations(evalsRes.data);
       setBadges(badgesRes.data);
@@ -338,6 +339,8 @@ export default function MenteeDetail() {
                 </div>
               </div>
             </div>
+
+            <InsightsPanel evaluations={evaluations} badges={badges} notes={notes} />
 
             <FocusAreasPanel evaluations={evaluations} />
 

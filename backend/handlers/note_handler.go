@@ -14,7 +14,13 @@ func (h *Handlers) GetNotes(c *fiber.Ctx) error {
 	if menteeID != "" {
 		query = query.Where("mentee_id = ?", menteeID)
 	}
-	
+	if startDate := c.Query("start_date"); startDate != "" {
+		query = query.Where("created_at >= ?", startDate)
+	}
+	if endDate := c.Query("end_date"); endDate != "" {
+		query = query.Where("created_at <= ?", endDate+" 23:59:59")
+	}
+
 	if err := query.Order("created_at desc").Find(&notes).Error; err != nil {
 		return respondError(c, fiber.StatusInternalServerError, err.Error())
 	}
