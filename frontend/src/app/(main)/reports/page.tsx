@@ -185,13 +185,17 @@ function MenteeCard({ report }: { report: MenteeReport }) {
 
 export default function Reports() {
   const { t } = useLanguage();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [reportData, setReportData] = useState<MenteeReportsResponse | null>(null);
   const [mentors, setMentors] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("30");
-  const [mentorFilter, setMentorFilter] = useState<string>("");
+  // A mentor sees only their own mentees by default; an admin with no mentor role of their own
+  // has no "own mentees" to scope to, so they still default to the full team-wide view.
+  const [mentorFilter, setMentorFilter] = useState<string>(() =>
+    user?.roles?.includes("mentor") ? user.id : ""
+  );
   const [search, setSearch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 

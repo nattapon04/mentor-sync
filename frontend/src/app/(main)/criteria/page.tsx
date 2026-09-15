@@ -253,14 +253,14 @@ export default function SLACriteria() {
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed min-w-[640px]">
                 <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border">
                   <tr>
-                    <th className="px-6 py-3 text-left font-semibold">{t('ruleNameColumn')}</th>
-                    <th className="px-6 py-3 text-left font-semibold">{t('typeColumn')}</th>
-                    <th className="px-6 py-3 text-left font-semibold">{t('appliesTo')}</th>
-                    <th className="px-6 py-3 text-left font-semibold">{t('targetColumn')}</th>
-                    <th className="px-6 py-3 text-right font-semibold">{t('actionsColumn')}</th>
+                    <th className="w-[34%] px-6 py-3 text-left font-semibold">{t('ruleNameColumn')}</th>
+                    <th className="w-[16%] px-6 py-3 text-left font-semibold">{t('typeColumn')}</th>
+                    <th className="w-[16%] px-6 py-3 text-left font-semibold">{t('appliesTo')}</th>
+                    <th className="w-[20%] px-6 py-3 text-left font-semibold">{t('targetColumn')}</th>
+                    <th className="w-[14%] px-6 py-3 text-right font-semibold">{t('actionsColumn')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
