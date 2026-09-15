@@ -236,19 +236,19 @@ export default function MenteeDetail() {
       </Link>
 
       {/* Header */}
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <User className="w-8 h-8 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{mentee.name}</h1>
-            <p className="text-muted-foreground">{mentee.email}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-foreground truncate">{mentee.name}</h1>
+            <p className="text-muted-foreground truncate">{mentee.email}</p>
             {mentee.department && <span className="inline-block mt-2 bg-muted text-foreground text-xs font-bold px-2 py-1 rounded-md">{t('departmentLabel')} {mentee.department}</span>}
           </div>
         </div>
-        <div>
-          <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
+        <div className="shrink-0">
+          <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} className="w-full sm:w-auto bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
             {TIME_RANGE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>)}
           </select>
         </div>
@@ -257,18 +257,18 @@ export default function MenteeDetail() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border">
-        <button onClick={() => setActiveTab("history")} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "history" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> {t('evaluationHistoryTab')}</div>
+      <div className="flex items-center gap-2 border-b border-border overflow-x-auto">
+        <button onClick={() => setActiveTab("history")} className={`shrink-0 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "history" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+          <div className="flex items-center gap-2 whitespace-nowrap"><Activity className="w-4 h-4" /> {t('evaluationHistoryTab')}</div>
         </button>
-        <button onClick={() => setActiveTab("evaluate")} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "evaluate" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <div className="flex items-center gap-2"><ClipboardList className="w-4 h-4" /> {t('evaluateByJiraTab')}</div>
+        <button onClick={() => setActiveTab("evaluate")} className={`shrink-0 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "evaluate" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+          <div className="flex items-center gap-2 whitespace-nowrap"><ClipboardList className="w-4 h-4" /> {t('evaluateByJiraTab')}</div>
         </button>
-        <button onClick={() => setActiveTab("badge")} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "badge" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <div className="flex items-center gap-2"><span className="text-base leading-none">🏆</span> {t('awardBadgeTab')}</div>
+        <button onClick={() => setActiveTab("badge")} className={`shrink-0 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "badge" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+          <div className="flex items-center gap-2 whitespace-nowrap"><span className="text-base leading-none">🏆</span> {t('awardBadgeTab')}</div>
         </button>
-        <button onClick={() => setActiveTab("note")} className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "note" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-          <div className="flex items-center gap-2"><span className="text-base leading-none">📝</span> {t('quickNoteTab')}</div>
+        <button onClick={() => setActiveTab("note")} className={`shrink-0 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "note" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+          <div className="flex items-center gap-2 whitespace-nowrap"><span className="text-base leading-none">📝</span> {t('quickNoteTab')}</div>
         </button>
       </div>
 
@@ -450,7 +450,7 @@ export default function MenteeDetail() {
                           {metricBadge(rule.metric_type)}
                         </div>
                         {inputState.is_enabled && (
-                          <div className={`grid gap-3 ml-7 ${rule.target_relative_to_estimate ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:ml-7 ${rule.target_relative_to_estimate ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                             {rule.target_relative_to_estimate && (
                               <input type="number" step="any" placeholder={t('estimateForThisTicket')} value={inputState.estimate_numeric} onChange={e => { const newInputs = [...metricInputs]; newInputs[idx].estimate_numeric = e.target.value; setMetricInputs(newInputs); }} className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                             )}
@@ -479,8 +479,8 @@ export default function MenteeDetail() {
           <div className="space-y-6">
             <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-4">
               <h4 className="text-lg font-bold text-foreground flex items-center gap-2"><span className="text-2xl">🏆</span> {t('awardBadgeTitle')}</h4>
-              <div className="flex gap-3">
-                <select value={selectedBadge} onChange={e => setSelectedBadge(e.target.value)} className="w-full max-w-md bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select value={selectedBadge} onChange={e => setSelectedBadge(e.target.value)} className="w-full sm:max-w-md bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20">
                   <option value="">{t('selectBadgeOption')}</option>
                   <option value="zero_defect">{t('badgeOptZero')}</option>
                   <option value="one_shot">{t('badgeOptOneShot')}</option>

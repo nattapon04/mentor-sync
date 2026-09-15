@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { LayoutDashboard, Users, Settings, UserCircle, LogOut, FileBarChart, MonitorDot, Moon, Sun, Droplets, ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, Users, Settings, UserCircle, LogOut, FileBarChart, MonitorDot, Moon, Sun, Droplets, ShieldAlert, Menu, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme, Theme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ export default function MainLayout({
   const { user, token, logout, isAuthenticated, isInitialized, hasRole } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -64,24 +65,39 @@ export default function MainLayout({
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
+      {/* Mobile backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col z-10">
-        <div className="h-16 flex items-center px-6 border-b border-border">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transition-transform duration-200 md:static md:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="h-16 flex items-center justify-between px-6 border-b border-border">
           <h1 className="text-xl font-extrabold text-foreground flex items-center gap-2 tracking-tight">
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
               <Users className="w-5 h-5" />
             </div>
             MentorSync
           </h1>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted md:hidden">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto py-4 space-y-6">
           
           {hasRole("admin") && (
             <div className="px-4">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-3">{t('adminWorkspace')}</p>
               <nav className="space-y-1">
-                <Link href="/admin/users" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/admin/users') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
+                <Link href="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/admin/users') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
                   <ShieldAlert className={`w-5 h-5 ${isActive('/admin/users') ? 'text-primary' : 'text-muted-foreground'}`} />
                   {t('userManagement')}
                 </Link>
@@ -93,15 +109,15 @@ export default function MainLayout({
             <div className="px-4">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-3">{t('seniorWorkspace')}</p>
               <nav className="space-y-1">
-                <Link href="/dashboard" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/dashboard') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
+                <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/dashboard') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
                   <LayoutDashboard className={`w-5 h-5 ${isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'}`} />
                   {t('teamDashboard')}
                 </Link>
-                <Link href="/criteria" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/criteria') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
+                <Link href="/criteria" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/criteria') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
                   <Settings className={`w-5 h-5 ${isActive('/criteria') ? 'text-primary' : 'text-muted-foreground'}`} />
                   {t('slaConfig')}
                 </Link>
-                <Link href="/reports" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/reports') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
+                <Link href="/reports" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/reports') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
                   <FileBarChart className={`w-5 h-5 ${isActive('/reports') ? 'text-primary' : 'text-muted-foreground'}`} />
                   {t('teamReports')}
                 </Link>
@@ -113,7 +129,7 @@ export default function MainLayout({
             <div className="px-4">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-3">{t('juniorWorkspace')}</p>
               <nav className="space-y-1">
-                <Link href="/my-dashboard" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/my-dashboard') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
+                <Link href="/my-dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all ${isActive('/my-dashboard') ? 'bg-secondary text-secondary-foreground' : 'text-foreground hover:bg-muted'}`}>
                   <MonitorDot className={`w-5 h-5 ${isActive('/my-dashboard') ? 'text-primary' : 'text-muted-foreground'}`} />
                   {t('myDashboard')}
                 </Link>
@@ -135,10 +151,15 @@ export default function MainLayout({
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* Topbar */}
-        <header className="h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 shrink-0 z-20">
-          <h2 className="text-lg font-bold text-foreground">MentorSync Platform</h2>
-          <div className="flex items-center gap-6">
-            
+        <header className="h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 sm:px-6 shrink-0 z-20 gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted md:hidden shrink-0">
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-bold text-foreground truncate hidden sm:block">MentorSync Platform</h2>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-6">
+
             {/* Theme Switcher */}
             <div className="flex items-center gap-1 bg-muted p-1 rounded-full border border-border">
               <button onClick={() => setTheme('light')} className={`p-1.5 rounded-full transition-colors ${theme === 'light' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -158,18 +179,18 @@ export default function MainLayout({
               <button onClick={() => setLang('th')} className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${lang === 'th' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>TH</button>
             </div>
 
-            <div className="flex items-center gap-3 border-l border-border pl-6">
-              <div className="flex flex-col items-end">
+            <div className="flex items-center gap-3 border-l border-border pl-2 sm:pl-6">
+              <div className="hidden sm:flex flex-col items-end">
                 <span className="text-sm font-bold text-foreground">{user.name}</span>
                 <span className="text-xs text-muted-foreground uppercase">{user.roles?.join(", ")}</span>
               </div>
-              <UserCircle className="w-8 h-8 text-muted-foreground" />
+              <UserCircle className="w-8 h-8 text-muted-foreground shrink-0" />
             </div>
           </div>
         </header>
-        
+
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6 lg:p-8">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

@@ -252,37 +252,39 @@ export default function SLACriteria() {
                 {scopeRules.length} {t('rulesCount')}
               </span>
             </div>
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border">
-                <tr>
-                  <th className="px-6 py-3 text-left font-semibold">{t('ruleNameColumn')}</th>
-                  <th className="px-6 py-3 text-left font-semibold">{t('typeColumn')}</th>
-                  <th className="px-6 py-3 text-left font-semibold">{t('appliesTo')}</th>
-                  <th className="px-6 py-3 text-left font-semibold">{t('targetColumn')}</th>
-                  <th className="px-6 py-3 text-right font-semibold">{t('actionsColumn')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {scopeRules.map(rule => (
-                  <tr key={rule.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-foreground">{rule.name}</td>
-                    <td className="px-6 py-4">{metricBadge(rule.metric_type)}</td>
-                    <td className="px-6 py-4">{evalTypeBadge(rule.eval_type || "both")}</td>
-                    <td className="px-6 py-4 font-mono text-foreground">{rule.target_value}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => openEditModal(rule)} className="p-2 text-muted-foreground hover:text-primary transition-colors" title={t('editRuleTooltip')}>
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(rule.id)} className="p-2 text-muted-foreground hover:text-rose-500 transition-colors" title={t('deleteRuleTooltip')}>
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/20 border-b border-border">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold">{t('ruleNameColumn')}</th>
+                    <th className="px-6 py-3 text-left font-semibold">{t('typeColumn')}</th>
+                    <th className="px-6 py-3 text-left font-semibold">{t('appliesTo')}</th>
+                    <th className="px-6 py-3 text-left font-semibold">{t('targetColumn')}</th>
+                    <th className="px-6 py-3 text-right font-semibold">{t('actionsColumn')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {scopeRules.map(rule => (
+                    <tr key={rule.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-foreground">{rule.name}</td>
+                      <td className="px-6 py-4">{metricBadge(rule.metric_type)}</td>
+                      <td className="px-6 py-4">{evalTypeBadge(rule.eval_type || "both")}</td>
+                      <td className="px-6 py-4 font-mono text-foreground">{rule.target_value}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => openEditModal(rule)} className="p-2 text-muted-foreground hover:text-primary transition-colors" title={t('editRuleTooltip')}>
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(rule.id)} className="p-2 text-muted-foreground hover:text-rose-500 transition-colors" title={t('deleteRuleTooltip')}>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))
       )}
